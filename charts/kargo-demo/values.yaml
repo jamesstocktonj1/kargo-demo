@@ -1,0 +1,6 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/jamesstocktonj1/kargo-demo
+  # Updated per environment by Kargo (see deploy/<env>/values.yaml).
+  tag: latest
