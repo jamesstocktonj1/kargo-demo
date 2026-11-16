@@ -1,0 +1,44 @@
+package app
+
+import (
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+
+	"github.com/gin-gonic/gin"
+)
+
+func TestGreet(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := NewRouter()
+
+	tests := []struct {
+		name       string
+		body       string
+		wantStatus int
+		wantBody   string
+	}{
+		{"valid name", `{"name":"James"}`, http.StatusOK, `{"message":"Hello, James!"}`},
+		{"missing name", `{}`, http.StatusBadRequest, `{"error":"name is required"}`},
+		{"blank name", `{"name":"   "}`, http.StatusBadRequest, `{"error":"name is required"}`},
+		{"invalid json", `not json`, http.StatusBadRequest, `{"error":"invalid JSON body"}`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, "/greet", strings.NewReader(tt.body))
+			req.Header.Set("Content-Type", "application/json")
+			w := httptest.NewRecorder()
+
+			router.ServeHTTP(w, req)
+
+			if w.Code != tt.wantStatus {
+				t.Errorf("status = %d, want %d", w.Code, tt.wantStatus)
+			}
+			if got := strings.TrimSpace(w.Body.String()); got != tt.wantBody {
+				t.Errorf("body = %s, want %s", got, tt.wantBody)
+			}
+		})
+	}
+}
