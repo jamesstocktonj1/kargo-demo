@@ -1,0 +1,131 @@
+# The Kargo pipeline for kargo-demo: Warehouse -> dev -> prod.
+# Applied by the kargo-demo-pipeline Application in the cluster-ops repo, into the
+# kargo-demo namespace (the Kargo Project, which already exists).
+#
+# A new image tag (X.Y.Z) becomes Freight. Each Stage's promotion writes that tag to
+# deploy/<env>/values.yaml, pushes to main, then syncs the Argo CD Application
+# kargo-demo-<env>.
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  name: kargo-demo
+  namespace: kargo-demo
+spec:
+  interval: 5m
+  subscriptions:
+    - image:
+        repoURL: ghcr.io/jamesstocktonj1/kargo-demo
+        imageSelectionStrategy: SemVer   # ignores latest and sha-* tags
+        constraint: ">=0.0.1"
+---
+# dev promotes by itself when new Freight appears; prod is promoted by hand in the UI.
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: kargo-demo   # must equal the Project name
+  namespace: kargo-demo
+spec:
+  promotionPolicies:
+    - stage: dev
+      autoPromotionEnabled: true
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: dev
+  namespace: kargo-demo
+spec:
+  vars:
+    - name: gitRepo
+      value: https://github.com/jamesstocktonj1/kargo-demo.git
+    - name: imageRepo
+      value: ghcr.io/jamesstocktonj1/kargo-demo
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: kargo-demo
+      sources:
+        direct: true
+  promotionTemplate:
+    spec:
+      steps:
+        - uses: git-clone
+          config:
+            repoURL: ${{ vars.gitRepo }}
+            checkout:
+              - branch: main
+                path: ./src
+        - uses: yaml-update
+          as: update
+          config:
+            path: ./src/deploy/dev/values.yaml
+            updates:
+              - key: image.tag
+                value: ${{ imageFrom(vars.imageRepo).Tag }}
+        - uses: git-commit
+          as: commit
+          config:
+            path: ./src
+            message: ${{ outputs.update.commitMessage }}
+        - uses: git-push
+          as: push
+          config:
+            path: ./src
+        - uses: argocd-update
+          config:
+            apps:
+              - name: kargo-demo-dev
+                sources:
+                  - repoURL: ${{ vars.gitRepo }}
+                    desiredRevision: ${{ outputs.push.commit }}
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: prod
+  namespace: kargo-demo
+spec:
+  vars:
+    - name: gitRepo
+      value: https://github.com/jamesstocktonj1/kargo-demo.git
+    - name: imageRepo
+      value: ghcr.io/jamesstocktonj1/kargo-demo
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: kargo-demo
+      sources:
+        stages:
+          - dev   # only Freight that is already in dev can go to prod
+  promotionTemplate:
+    spec:
+      steps:
+        - uses: git-clone
+          config:
+            repoURL: ${{ vars.gitRepo }}
+            checkout:
+              - branch: main
+                path: ./src
+        - uses: yaml-update
+          as: update
+          config:
+            path: ./src/deploy/prod/values.yaml
+            updates:
+              - key: image.tag
+                value: ${{ imageFrom(vars.imageRepo).Tag }}
+        - uses: git-commit
+          as: commit
+          config:
+            path: ./src
+            message: ${{ outputs.update.commitMessage }}
+        - uses: git-push
+          as: push
+          config:
+            path: ./src
+        - uses: argocd-update
+          config:
+            apps:
+              - name: kargo-demo-prod
+                sources:
+                  - repoURL: ${{ vars.gitRepo }}
+                    desiredRevision: ${{ outputs.push.commit }}
