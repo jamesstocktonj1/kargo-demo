@@ -2,9 +2,11 @@
 # Applied by the kargo-demo-pipeline Application in the cluster-ops repo, into the
 # kargo-demo namespace (the Kargo Project, which already exists).
 #
-# A new image tag (X.Y.Z) becomes Freight. Each Stage's promotion writes that tag to
-# deploy/<env>/values.yaml, pushes to main, then syncs the Argo CD Application
-# kargo-demo-<env>. The steps are the same for every Stage, so they live in one
+# A new image tag (X.Y.Z) becomes Freight. Each Stage's promotion rebuilds its own
+# branch, stage/<env>, from main (the chart plus deploy/<env>/ with the new image tag),
+# pushes it, then syncs the Argo CD Application kargo-demo-<env>, which tracks that
+# branch. One branch per Stage means one Stage's promotion never moves another Stage's
+# revision, so Kargo's health check (does the app sit on the commit I pushed?) stays true. The steps are the same for every Stage, so they live in one
 # PromotionTask below.
 apiVersion: kargo.akuity.io/v1alpha1
 kind: Warehouse
@@ -51,22 +53,38 @@ spec:
         checkout:
           - branch: main
             path: ./src
+          - branch: stage/${{ vars.env }}
+            create: true   # first promotion creates the branch (empty)
+            path: ./out
+    # Rebuild the stage branch from main every time: only the chart and this
+    # environment's values, with the new image tag.
+    - uses: git-clear
+      config:
+        path: ./out
+    - uses: copy
+      config:
+        inPath: ./src/charts
+        outPath: ./out/charts
+    - uses: copy
+      config:
+        inPath: ./src/deploy/${{ vars.env }}
+        outPath: ./out/deploy/${{ vars.env }}
     - uses: yaml-update
       as: update
       config:
-        path: ./src/deploy/${{ vars.env }}/values.yaml
+        path: ./out/deploy/${{ vars.env }}/values.yaml
         updates:
           - key: image.tag
             value: ${{ imageFrom(vars.imageRepo).Tag }}
     - uses: git-commit
       as: commit
       config:
-        path: ./src
+        path: ./out
         message: ${{ task.outputs['update'].commitMessage }}
     - uses: git-push
       as: push
       config:
-        path: ./src
+        path: ./out
     - uses: argocd-update
       config:
         apps:
