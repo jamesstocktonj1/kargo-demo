@@ -15,5 +15,11 @@ spec:
       containers:
         - name: app
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          env:
+            - name: ENV
+              value: {{ .Values.environment | quote }}
           ports:
-            - containerPort: 8080
+            - name: http
+              containerPort: 8080
+            - name: metrics
+              containerPort: {{ .Values.metrics.port }}
