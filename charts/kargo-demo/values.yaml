@@ -4,3 +4,17 @@ image:
   repository: ghcr.io/jamesstocktonj1/kargo-demo
   # Updated per environment by Kargo (see deploy/<env>/values.yaml).
   tag: latest
+
+# Reported as the "environment" label on every application metric (the app reads it from $ENV).
+environment: ""
+
+metrics:
+  # Port the app serves /metrics on (see internal/observability/metrics.go).
+  port: 9090
+  serviceMonitor:
+    # Needs the Prometheus Operator CRDs in the cluster.
+    enabled: true
+    interval: 15s
+    # Extra labels on the ServiceMonitor, for Prometheus instances whose
+    # serviceMonitorSelector requires one (kube-prometheus-stack uses release: <name>).
+    labels: {}

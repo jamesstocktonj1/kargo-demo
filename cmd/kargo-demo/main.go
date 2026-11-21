@@ -7,7 +7,12 @@ import (
 )
 
 func main() {
-	if err := app.NewRouter().Run(":8080"); err != nil {
+	server, err := app.NewRouter()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err := server.Run(":8080"); err != nil {
 		log.Fatal(err)
 	}
 }

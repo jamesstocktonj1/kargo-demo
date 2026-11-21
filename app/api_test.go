@@ -7,11 +7,13 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGreet(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	router := NewRouter()
+	router, err := NewRouter()
+	assert.NoError(t, err)
 
 	tests := []struct {
 		name       string
@@ -33,12 +35,8 @@ func TestGreet(t *testing.T) {
 
 			router.ServeHTTP(w, req)
 
-			if w.Code != tt.wantStatus {
-				t.Errorf("status = %d, want %d", w.Code, tt.wantStatus)
-			}
-			if got := strings.TrimSpace(w.Body.String()); got != tt.wantBody {
-				t.Errorf("body = %s, want %s", got, tt.wantBody)
-			}
+			assert.Equal(t, tt.wantStatus, w.Code)
+			assert.Equal(t, tt.wantBody, strings.TrimSpace(w.Body.String()))
 		})
 	}
 }
