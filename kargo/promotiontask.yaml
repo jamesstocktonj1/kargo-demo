@@ -1,0 +1,58 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: PromotionTask
+metadata:
+  name: promote-env
+  namespace: kargo-demo
+spec:
+  vars:
+    - name: env   # no default, so every Stage must set it: dev, staging or prod
+    - name: gitRepo
+      value: https://github.com/jamesstocktonj1/kargo-demo.git
+    - name: imageRepo
+      value: ghcr.io/jamesstocktonj1/kargo-demo
+  steps:
+    - uses: git-clone
+      config:
+        repoURL: ${{ vars.gitRepo }}
+        checkout:
+          - branch: main
+            path: ./src
+          - branch: stage/${{ vars.env }}
+            create: true   # first promotion creates the branch (empty)
+            path: ./out
+    # Rebuild the stage branch from main every time: only the chart and this
+    # environment's values, with the new image tag.
+    - uses: git-clear
+      config:
+        path: ./out
+    - uses: copy
+      config:
+        inPath: ./src/charts
+        outPath: ./out/charts
+    - uses: copy
+      config:
+        inPath: ./src/deploy/${{ vars.env }}
+        outPath: ./out/deploy/${{ vars.env }}
+    - uses: yaml-update
+      as: update
+      config:
+        path: ./out/deploy/${{ vars.env }}/values.yaml
+        updates:
+          - key: image.tag
+            value: ${{ imageFrom(vars.imageRepo).Tag }}
+    - uses: git-commit
+      as: commit
+      config:
+        path: ./out
+        message: ${{ task.outputs['update'].commitMessage }}
+    - uses: git-push
+      as: push
+      config:
+        path: ./out
+    - uses: argocd-update
+      config:
+        apps:
+          - name: kargo-demo-${{ vars.env }}
+            sources:
+              - repoURL: ${{ vars.gitRepo }}
+                desiredRevision: ${{ task.outputs['push'].commit }}

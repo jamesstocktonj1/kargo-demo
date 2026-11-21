@@ -1,0 +1,22 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: prod
+  namespace: kargo-demo
+spec:
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: kargo-demo
+      sources:
+        stages:
+          - staging   # only Freight that is already in staging can go to prod
+        requiredSoakTime: 5m   # ...and only after it has sat in staging this long
+  promotionTemplate:
+    spec:
+      steps:
+        - task:
+            name: promote-env
+          vars:
+            - name: env
+              value: prod
