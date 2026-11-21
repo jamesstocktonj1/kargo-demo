@@ -18,6 +18,8 @@ spec:
           env:
             - name: ENV
               value: {{ .Values.environment | quote }}
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: service.version={{ .Values.image.tag }}
           ports:
             - name: http
               containerPort: 8080

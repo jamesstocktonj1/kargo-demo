@@ -18,7 +18,11 @@ func InitMetrics(r *resource.Resource) error {
 		otelprom.WithRegisterer(reg),
 		otelprom.WithoutTargetInfo(),
 		otelprom.WithoutScopeInfo(),
-		otelprom.WithResourceAsConstantLabels(attribute.NewAllowKeysFilter("environment")),
+		otelprom.WithResourceAsConstantLabels(attribute.NewAllowKeysFilter(
+			"environment",
+			"service.version",
+			"host.name",
+		)),
 	)
 	if err != nil {
 		return err

@@ -1,6 +1,7 @@
 package observability
 
 import (
+	"context"
 	"os"
 
 	"github.com/gin-gonic/gin"
@@ -9,11 +10,13 @@ import (
 )
 
 func Init(r *gin.Engine) error {
-	res := initResource()
+	res, err := initResource(context.Background())
+	if err != nil {
+		return err
+	}
 
 	// Metrics
-	err := InitMetrics(res)
-	if err != nil {
+	if err := InitMetrics(res); err != nil {
 		return err
 	}
 
@@ -26,8 +29,13 @@ func Init(r *gin.Engine) error {
 	return nil
 }
 
-func initResource() *resource.Resource {
-	return resource.NewSchemaless(
-		attribute.String("environment", os.Getenv("ENV")),
+func initResource(ctx context.Context) (*resource.Resource, error) {
+	return resource.New(ctx,
+		resource.WithAttributes(
+			attribute.String("service.name", "kargo-demo"),
+			attribute.String("environment", os.Getenv("ENV")),
+		),
+		resource.WithHost(),
+		resource.WithFromEnv(),
 	)
 }
