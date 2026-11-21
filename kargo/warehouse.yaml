@@ -1,0 +1,17 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  name: kargo-demo
+  namespace: kargo-demo
+spec:
+  interval: 5m
+  subscriptions:
+    - image:
+        repoURL: ghcr.io/jamesstocktonj1/kargo-demo
+        imageSelectionStrategy: SemVer   # ignores latest and sha-* tags
+        constraint: ">=0.0.1"
+    - git:
+        repoURL: https://github.com/jamesstocktonj1/kargo-demo.git
+        branch: main
+        includePaths:
+          - glob:charts/**

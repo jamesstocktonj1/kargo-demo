@@ -1,0 +1,27 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: staging
+  namespace: kargo-demo
+spec:
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: kargo-demo
+      sources:
+        stages:
+          - dev   # only Freight that is already in dev can go to staging
+  promotionTemplate:
+    spec:
+      steps:
+        - task:
+            name: promote-env
+          vars:
+            - name: env
+              value: staging
+  verification:
+    analysisTemplates:
+      - name: staging-slo
+    args:
+      - name: version
+        value: ${{ imageFrom("ghcr.io/jamesstocktonj1/kargo-demo").Tag }}
