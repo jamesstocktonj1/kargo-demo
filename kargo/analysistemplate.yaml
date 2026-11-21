@@ -9,7 +9,7 @@ spec:
     - name: prometheusAddress
       value: http://monitoring-kube-prometheus-prometheus.monitoring.svc:9090
     - name: window
-      value: 2m
+      value: 5m
   metrics:
     - name: p95-latency
       interval: 1m
