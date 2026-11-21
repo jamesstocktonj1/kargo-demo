@@ -40,3 +40,14 @@ spec:
             )
             /
             sum(rate(http_response_status_code_total{environment="staging",service_version="{{ args.version }}"}[{{ args.window }}]))
+    - name: min-traffic
+      interval: 1m
+      initialDelay: 2m
+      count: 5
+      failureLimit: 0
+      successCondition: result[0] >= 100   # requests per window
+      provider:
+        prometheus:
+          address: "{{ args.prometheusAddress }}"
+          query: |
+            sum(increase(http_response_status_code_total{environment="staging",service_version="{{ args.version }}"}[{{ args.window }}]))
