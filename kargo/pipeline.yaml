@@ -20,6 +20,11 @@ spec:
         repoURL: ghcr.io/jamesstocktonj1/kargo-demo
         imageSelectionStrategy: SemVer   # ignores latest and sha-* tags
         constraint: ">=0.0.1"
+    - git:
+        repoURL: https://github.com/jamesstocktonj1/kargo-demo.git
+        branch: main
+        includePaths:
+          - glob:charts/**
 ---
 # dev and staging promote by themselves; prod is promoted by hand in the UI.
 apiVersion: kargo.akuity.io/v1alpha1
