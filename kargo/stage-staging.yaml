@@ -19,3 +19,9 @@ spec:
           vars:
             - name: env
               value: staging
+  verification:
+    analysisTemplates:
+      - name: staging-slo
+    args:
+      - name: version
+        value: ${{ imageFrom("ghcr.io/jamesstocktonj1/kargo-demo").Tag }}

@@ -9,3 +9,5 @@ spec:
       autoPromotionEnabled: true
     - stage: staging
       autoPromotionEnabled: true
+    - stage: prod
+      autoPromotionEnabled: true
